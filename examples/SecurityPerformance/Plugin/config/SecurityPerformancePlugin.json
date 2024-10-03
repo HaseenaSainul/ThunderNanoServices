@@ -1,0 +1,5 @@
+{
+ "locator":"libThunderSecurityPerformancePlugin.so",
+ "classname":"SecurityPerformancePlugin",
+ "startmode":"Activated"
+}

@@ -24,7 +24,7 @@ find_package(Thunder)
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
-option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
+option(EXAMPLE_COMRPCCLIENT "Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
@@ -36,6 +36,7 @@ option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message 
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
+option(PLUGIN_SECURITYPERFORMANCE "Include Security Performance test plugin and client" ON)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -44,6 +45,11 @@ endif()
 if(PLUGIN_JSONRPC)
     add_subdirectory(JSONRPC/Plugin)
     add_subdirectory(JSONRPC/Client)
+endif()
+
+if(PLUGIN_SECURITYPERFORMANCE)
+    add_subdirectory(SecurityPerformance/Plugin)
+    add_subdirectory(SecurityPerformance/Client)
 endif()
 
 if(PLUGIN_FILETRANSFER)
