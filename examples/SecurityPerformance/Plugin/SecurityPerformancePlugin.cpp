@@ -40,6 +40,7 @@ namespace Plugin {
     PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     SecurityPerformancePlugin::SecurityPerformancePlugin()
         : _rpcServer(nullptr)
+        , _forwarder(nullptr)
     {
     }
     POP_WARNING()
@@ -55,6 +56,8 @@ namespace Plugin {
         Core::NodeId source(config.Connector.Value().c_str());
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
+        _forwarder = new Forwarder();
+        _forwarder->AddRef();
 
         // On success return empty, to indicate there is no error text.
         return (string());
@@ -63,6 +66,7 @@ namespace Plugin {
     /* virtual */ void SecurityPerformancePlugin::Deinitialize(PluginHost::IShell * /* service */)
     {
         delete _rpcServer;
+        _forwarder->Release();
     }
 
     /* virtual */ string SecurityPerformancePlugin::Information() const
@@ -80,7 +84,7 @@ namespace Plugin {
     // Exchange::ISecurityPerformance methods
     Exchange::ISecurityPerformance::IForwarder* SecurityPerformancePlugin::GetInterface() /* override */
     {
-        return nullptr;
+        return _forwarder;
     }
     Core::hresult SecurityPerformancePlugin::Sum(const uint32_t a, const uint32_t b, uint32_t& sum) const /* override */
     {
@@ -90,11 +94,13 @@ namespace Plugin {
 
     uint32_t SecurityPerformancePlugin::Send(const uint16_t sendSize, const uint8_t buffer[] VARIABLE_IS_NOT_USED) /* override */
     {
+        printf("Send Size: %d \n", sendSize);
         uint32_t result = sendSize;
         return (result);
     }
     uint32_t SecurityPerformancePlugin::Receive(uint16_t & bufferSize, uint8_t buffer[]) const /* override */ 
     {
+        printf("Receive Size: %d \n", bufferSize);
         static uint8_t pattern[] = { 0x00, 0x66, 0xBB, 0xEE };
         uint32_t result = Core::ERROR_NONE;
         uint8_t patternLength = sizeof(pattern);
@@ -112,6 +118,7 @@ namespace Plugin {
     }
     uint32_t SecurityPerformancePlugin::Exchange(uint16_t & bufferSize VARIABLE_IS_NOT_USED, uint8_t buffer[], const uint16_t maxBufferSize) /* override */
     {
+        printf("Exchange Size: %d \n", bufferSize);
         uint32_t result = Core::ERROR_NONE;
         static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };
         uint8_t patternLength = sizeof(pattern);

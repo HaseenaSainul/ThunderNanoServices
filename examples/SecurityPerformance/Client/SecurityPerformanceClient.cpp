@@ -49,7 +49,7 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
 void ShowMenu()
 {
     printf("Enter\n"
-           "\tP : Measure performance of send/recieve/exchange\n"
+           "\tD : Measure performance of send/recieve/exchange\n"
            "\tF : Measure performance of forwarder interfaces\n"
            "\tS : Measure performance of interface:sum()\n"
            "\tH : Help\n"
@@ -72,9 +72,9 @@ typedef std::function<uint32_t(uint16_t& size, uint8_t buffer[])> PerformanceFun
 constexpr uint32_t MeasurementLoops = 20;
 static uint8_t swapPattern[] = { 0x00, 0x55, 0xAA, 0xFF };
 
-static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8_t pattern[], PerformanceFunction& subject)
+static void Measure(const uint8_t patternLength, const uint8_t pattern[], PerformanceFunction& subject)
 {
-    uint8_t dataFrame[1024 * 32];
+    uint8_t dataFrame[1024 * 10];
     uint16_t index = 0;
     uint8_t patternIndex = 0;
 
@@ -87,7 +87,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         patternIndex %= (patternLength - 1);
     }
 
-    printf("Measurements [%s]:\n", info);
+    printf("Measurements :\n");
     uint64_t time;
     Core::StopWatch measurement;
     uint16_t length = 0;
@@ -149,12 +149,20 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     printf("Data outbound: [2048], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
-    length = 1024 * 32;
+    length = (1024 * 8) - 1;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [32KB], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
+    printf("Data outbound: [8KB], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    length = (1024 * 8) + 100;
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(length, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound: [8KB + 100], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
 }
 
@@ -180,14 +188,14 @@ void MeasureDataFlow(Core::ProxyType<RPC::CommunicatorClient>& client)
                         return (perf->Send(length, buffer));
                     };
 
-                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
+                    Measure(sizeof(swapPattern), swapPattern, implementation);
                     break;
                 }
                 case 'R': {
                     PerformanceFunction implementation = [perf](uint16_t& length, uint8_t buffer[]) -> uint32_t {
                         return (perf->Receive(length, buffer));
                     };
-                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
+                    Measure(sizeof(swapPattern), swapPattern, implementation);
                     break;
                 }
                 case 'E': {
@@ -195,7 +203,7 @@ void MeasureDataFlow(Core::ProxyType<RPC::CommunicatorClient>& client)
                         const uint16_t maxBufferSize = length;
                         return (perf->Exchange(length, buffer, maxBufferSize));
                     };
-                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
+                    Measure(sizeof(swapPattern), swapPattern, implementation);
                     break;
                 }
                 default: {
@@ -208,32 +216,46 @@ void MeasureDataFlow(Core::ProxyType<RPC::CommunicatorClient>& client)
     }
 }
 
-void MeasureSum(Core::ProxyType<RPC::CommunicatorClient>& client, bool forwarder)
+typedef std::function<uint32_t(const uint32_t a, const uint32_t b, uint32_t& sum)> SumFunction;
+void Measure(const TCHAR info[], SumFunction& sum)
+{
+    Core::StopWatch measurement;
+    const uint32_t a = 8888, b = 1111;
+    uint32_t s = 0;
+
+    uint64_t time;
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        sum(a, b, s);
+        printf("sum = %d\n", s);
+    }
+    printf("Measurements [%s]:\n", info);
+    time = measurement.Elapsed();
+    printf("Total time : %" PRIu64 " Average time: %" PRIu64 " \n", time, time / MeasurementLoops);
+}
+void MeasureSum(Core::ProxyType<RPC::CommunicatorClient>& client, bool isForwarder)
 {
     if ((client.IsValid() == false) || (client->IsOpen() == false)) {
         printf("Can not measure the performance of COMRPC, there is no connection.\n");
     } else {
-        Core::StopWatch measurement;
         Exchange::ISecurityPerformance* perf = client->Acquire<Exchange::ISecurityPerformance>(2000, _T("SecurityPerformancePlugin"), ~0);
         if (perf == nullptr) {
-            printf("Instantiation failed. An performance interface was not returned. It took: %" PRIu64 " ticks\n", measurement.Elapsed());
+            printf("Instantiation failed. An performance interface was not returned\n");
         } else {
-            printf("Instantiating and retrieving the interface took: %" PRIu64 " ticks\n", measurement.Elapsed());
-            uint32_t a = 8888, b = 1111;
-            uint32_t sum;
-
-            if (forwarder) {
+            if (isForwarder) {
                 Exchange::ISecurityPerformance::IForwarder* forwarder = perf->GetInterface();
                 if (forwarder != nullptr) {
-                    printf("Measurements [Forwarder:Sum]:\n");
-                    forwarder->Sum(a, b, sum);
+                    SumFunction implementation = [forwarder](const uint32_t a, const uint32_t b, uint32_t& sum) -> uint32_t {
+                        return forwarder->Sum(a, b, sum);
+                    };
+                    Measure(_T("Forwarder:Sum"), implementation);
                 }
             } else {
-                printf("Measurements [Sum]:\n");
-                perf->Sum(a, b, sum);
+                printf("Measurements [Sum]: ");
+                SumFunction implementation = [perf](const uint32_t a, const uint32_t b, uint32_t& sum) -> Core::hresult {
+                    return perf->Sum(a, b, sum);
+                };
+                Measure(_T("Sum"), implementation);
             }
-            printf("Invocation took: %" PRIu64 " ticks\n", measurement.Elapsed());
-            printf("Sum = %d\n", sum);
         }
     }
 }

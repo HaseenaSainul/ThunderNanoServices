@@ -108,6 +108,20 @@ namespace Plugin {
 
         public:
             Core::hresult Sum(const uint32_t a, const uint32_t b, uint32_t& sum) const override;
+            uint32_t AddRef() const override
+            {
+                Core::InterlockedIncrement(_refCount);
+                return Core::ERROR_NONE;
+            }
+            uint32_t Release() const override
+            {
+                if (Core::InterlockedDecrement(_refCount) == 0) {
+                    delete this;
+                }
+                return (Core::ERROR_NONE);
+            }
+        private:
+            mutable uint32_t _refCount;
         };
 
     public:
@@ -136,6 +150,7 @@ namespace Plugin {
 
     private:
         COMServer* _rpcServer;
+        Forwarder* _forwarder;
     };
 
 } // namespace Plugin
