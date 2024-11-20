@@ -279,7 +279,10 @@ namespace Plugin {
                     if ((running == true) && (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
-                            running = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
+                            PluginHost::IStateControl::state state = PluginHost::IStateControl::UNINITIALIZED;
+                            if (stateCtrl->State(state) == Core::ERROR_NONE) {
+                                running = (state == PluginHost::IStateControl::RESUMED);
+                            }
                             stateCtrl->Release();
                         }
                     }
@@ -301,7 +304,10 @@ namespace Plugin {
                     if ((hidden == true) && (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
-                            hidden = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
+                            PluginHost::IStateControl::state state = PluginHost::IStateControl::UNINITIALIZED;
+                            if (stateCtrl->State(state) == Core::ERROR_NONE) {
+                                hidden = (state == PluginHost::IStateControl::RESUMED);
+                            }
                             stateCtrl->Release();
                         }
                     }
@@ -378,8 +384,11 @@ namespace Plugin {
 
                             PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                             if (stateCtrl != nullptr) {
-                                if (stateCtrl->State() == PluginHost::IStateControl::SUSPENDED) {
-                                    stateCtrl->Request(PluginHost::IStateControl::RESUME);
+                                PluginHost::IStateControl::state state = PluginHost::IStateControl::UNINITIALIZED;
+                                if (stateCtrl->State(state) == Core::ERROR_NONE) {
+                                    if (state == PluginHost::IStateControl::SUSPENDED) {
+                                        stateCtrl->Request(PluginHost::IStateControl::RESUME);
+                                    }
                                 }
                                 stateCtrl->Release();
                             } else {
@@ -405,8 +414,11 @@ namespace Plugin {
                     if (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED) {
                         PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
-                            if (stateCtrl->State() != PluginHost::IStateControl::SUSPENDED) {
-                                stateCtrl->Request(PluginHost::IStateControl::SUSPEND);
+                            PluginHost::IStateControl::state state = PluginHost::IStateControl::UNINITIALIZED;
+                            if (stateCtrl->State(state) == Core::ERROR_NONE) {
+                                if (state != PluginHost::IStateControl::SUSPENDED) {
+                                    stateCtrl->Request(PluginHost::IStateControl::SUSPEND);
+                                }
                             }
                             stateCtrl->Release();
                         }

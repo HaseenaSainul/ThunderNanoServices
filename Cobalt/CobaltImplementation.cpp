@@ -533,9 +533,16 @@ public:
         _adminLock.Unlock();
     }
 
-    PluginHost::IStateControl::state State() const override
+    uint32_t State(PluginHost::IStateControl::state& state) const override
     {
-        return (_state);
+        state = _state;
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t State(const PluginHost::IStateControl::state state) override
+    {
+        _state = state;
+        return Core::ERROR_NONE;
     }
 
     uint32_t Request(const PluginHost::IStateControl::command command) override

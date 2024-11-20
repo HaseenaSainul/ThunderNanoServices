@@ -131,15 +131,14 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
 
         if (_cobalt != nullptr) {
             _cobalt->Register(&_notification);
-            PluginHost::IStateControl *stateControl(
-                    _cobalt->QueryInterface<PluginHost::IStateControl>());
+            _stateControl = _cobalt->QueryInterface<PluginHost::IStateControl>();
 
-            if (stateControl == nullptr) {
+            if (_stateControl == nullptr) {
                 message = _T("Cobalt StateControl could not be Obtained.");
             } else {
-                stateControl->Register(&_notification);
-                stateControl->Configure(_service);
-                stateControl->Release();
+                _stateControl->Register(&_notification);
+                PluginHost::JStateControl::Register(*this, _stateControl);
+                _stateControl->Configure(_service);
                 _application = _cobalt->QueryInterface<Exchange::IApplication>();
                 if (_application != nullptr) {
 
@@ -172,14 +171,14 @@ void Cobalt::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
 
         if (_cobalt != nullptr) {
             _cobalt->Unregister(&_notification);
-            PluginHost::IStateControl *stateControl(_cobalt->QueryInterface<PluginHost::IStateControl>());
             // Make sure the Activated and Deactivated are no longer called before we
             // start cleaning up..
             // In case Cobalt crashed, there is no access to the statecontrol interface,
             // check it !!
-            if (stateControl != nullptr) {
-                stateControl->Unregister(&_notification);
-                stateControl->Release();
+            if (_stateControl != nullptr) {
+                PluginHost::JStateControl::Unregister(*this);
+                _stateControl->Unregister(&_notification);
+                _stateControl->Release();
             } else {
                 // On behalf of the crashed process, we will release the notification sink.
                 _notification.Release();
@@ -248,15 +247,14 @@ Core::ProxyType<Web::Response> Cobalt::Process(const Web::Request &request)
         // We might be receiving a plugin download request.
         if ((index.Next() == true) && (index.Next() == true)
                 && (_cobalt != nullptr)) {
-            PluginHost::IStateControl *stateControl(
                     _cobalt->QueryInterface<PluginHost::IStateControl>());
-            if (stateControl != nullptr) {
+            if (_stateControl != nullptr) {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
                 if (index.Remainder() == _T("Suspend")) {
-                    stateControl->Request(PluginHost::IStateControl::SUSPEND);
+                    _stateControl->Request(PluginHost::IStateControl::SUSPEND);
                 } else if (index.Remainder() == _T("Resume")) {
-                    stateControl->Request(PluginHost::IStateControl::RESUME);
+                    _stateControl->Request(PluginHost::IStateControl::RESUME);
                 } else if ((index.Remainder() == _T("URL"))
                         && (request.HasBody() == true)
                         && (request.Body<const Data>()->URL.Value().empty()
@@ -266,7 +264,7 @@ Core::ProxyType<Web::Response> Cobalt::Process(const Web::Request &request)
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = "Unknown error";
                 }
-                stateControl->Release();
+                _stateControl->Release();
             }
         }
     } else if (request.Verb == Web::Request::HTTP_GET) {
@@ -328,13 +326,13 @@ void Cobalt::StateChange(const PluginHost::IStateControl::state state)
         TRACE(Trace::Information,
                 (string(_T("StateChange: { \"suspend\":false }"))));
         _service->Notify("{ \"suspended\":false }");
-        event_statechange(false);
+        PluginHost::JStateControl::Event::StateChange(*this, state);
         break;
     case PluginHost::IStateControl::SUSPENDED:
         TRACE(Trace::Information,
                 (string(_T("StateChange: { \"suspend\":true }"))));
         _service->Notify("{ \"suspended\":true }");
-        event_statechange(true);
+        PluginHost::JStateControl::Event::StateChange(*this, state);
         break;
     case PluginHost::IStateControl::EXITED:
         // Exited by Cobalt app

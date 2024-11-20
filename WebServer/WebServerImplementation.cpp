@@ -729,6 +729,7 @@ POP_WARNING()
             uint32_t result = _channelServer.Configure(service->DataPath(), config);
             return (result);
         }
+
         PluginHost::IStateControl::state State() const override
         {
             PluginHost::IStateControl::state state;
@@ -738,6 +739,21 @@ POP_WARNING()
             return state;
         }
 
+        uint32_t State(PluginHost::IStateControl::state& state) const override
+        {
+            _adminLock.Lock();
+            state = _state;
+            _adminLock.Unlock();
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t State(const PluginHost::IStateControl::state state) override
+        {
+            _adminLock.Lock();
+            _state = state;
+            _adminLock.Unlock();
+            return Core::ERROR_NONE;
+        }
 
         void Dispatch() {
             bool stateChanged = false;

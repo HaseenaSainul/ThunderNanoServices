@@ -24,8 +24,9 @@
 #include <interfaces/IApplication.h>
 #include <interfaces/IMemory.h>
 #include <interfaces/json/JsonData_Browser.h>
-#include <interfaces/json/JsonData_StateControl.h>
 #include <interfaces/json/JApplication.h>
+#include <plugins/json/JsonData_StateControl.h>
+#include <plugins/json/JStateControl.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -128,6 +129,7 @@ public:
         , _hidden(false)
         , _cobalt(nullptr)
         , _application(nullptr)
+        , _stateControl(nullptr)
         , _memory(nullptr)
         , _service(nullptr)
         , _notification(this) {
@@ -139,7 +141,7 @@ public:
     INTERFACE_ENTRY (PluginHost::IPlugin)
     INTERFACE_ENTRY (PluginHost::IWeb)
     INTERFACE_ENTRY (PluginHost::IDispatcher)
-    INTERFACE_AGGREGATE(PluginHost::IStateControl, _cobalt)
+    INTERFACE_AGGREGATE(PluginHost::IStateControl, _stateControl)
     INTERFACE_AGGREGATE(Exchange::IApplication, _application)
     INTERFACE_AGGREGATE(Exchange::IBrowser, _cobalt)
     INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
@@ -175,16 +177,11 @@ private:
     uint32_t set_visibility(
             const Core::JSON::EnumType<JsonData::Browser::VisibilityType> &param); // Browser
     uint32_t get_fps(Core::JSON::DecUInt32 &response) const; // Browser
-    uint32_t get_state(
-            Core::JSON::EnumType<JsonData::StateControl::StateType> &response) const; // StateControl
-    uint32_t set_state(
-            const Core::JSON::EnumType<JsonData::StateControl::StateType> &param); // StateControl
     uint32_t endpoint_delete(const JsonData::Browser::DeleteParamsData& params);
     uint32_t DeleteDir(const string& path);
     uint32_t set_deeplink(const Core::JSON::String &param); // Application
     void event_urlchange(const string &url, const bool &loaded); // Browser
     void event_visibilitychange(const bool &hidden); // Browser
-    void event_statechange(const bool &suspended); // StateControl
 
 private:
     uint8_t _skipURL;
@@ -192,6 +189,7 @@ private:
     bool _hidden;
     Exchange::IBrowser *_cobalt;
     Exchange::IApplication *_application;
+    PluginHost::IStateControl *_stateControl;
     Exchange::IMemory *_memory;
     PluginHost::IShell *_service;
     Core::SinkType<Notification> _notification;
