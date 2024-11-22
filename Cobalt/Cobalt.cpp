@@ -245,27 +245,23 @@ Core::ProxyType<Web::Response> Cobalt::Process(const Web::Request &request)
 
     if (request.Verb == Web::Request::HTTP_POST) {
         // We might be receiving a plugin download request.
-        if ((index.Next() == true) && (index.Next() == true)
-                && (_cobalt != nullptr)) {
-                    _cobalt->QueryInterface<PluginHost::IStateControl>());
-            if (_stateControl != nullptr) {
-                result->ErrorCode = Web::STATUS_OK;
-                result->Message = "OK";
-                if (index.Remainder() == _T("Suspend")) {
-                    _stateControl->Request(PluginHost::IStateControl::SUSPEND);
-                } else if (index.Remainder() == _T("Resume")) {
-                    _stateControl->Request(PluginHost::IStateControl::RESUME);
-                } else if ((index.Remainder() == _T("URL"))
-                        && (request.HasBody() == true)
-                        && (request.Body<const Data>()->URL.Value().empty()
-                                == false)) {
-                    _cobalt->SetURL(request.Body<const Data>()->URL.Value());
-                } else {
-                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = "Unknown error";
-                }
-                _stateControl->Release();
+        if ((index.Next() == true) && (index.Next() == true) &&
+            (_cobalt != nullptr) && (_stateControl != nullptr)) {
+            result->ErrorCode = Web::STATUS_OK;
+            result->Message = "OK";
+            if (index.Remainder() == _T("Suspend")) {
+                _stateControl->Request(PluginHost::IStateControl::SUSPEND);
+            } else if (index.Remainder() == _T("Resume")) {
+                _stateControl->Request(PluginHost::IStateControl::RESUME);
+            } else if ((index.Remainder() == _T("URL"))
+                && (request.HasBody() == true)
+                && (request.Body<const Data>()->URL.Value().empty() == false)) {
+                _cobalt->SetURL(request.Body<const Data>()->URL.Value());
+            } else {
+                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                result->Message = "Unknown error";
             }
+            _stateControl->Release();
         }
     } else if (request.Verb == Web::Request::HTTP_GET) {
     }
