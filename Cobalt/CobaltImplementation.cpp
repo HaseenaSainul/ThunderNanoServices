@@ -535,14 +535,15 @@ public:
 
     uint32_t State(PluginHost::IStateControl::state& state) const override
     {
+        _adminLock.Lock();
         state = _state;
+        _adminLock.Unlock();
         return Core::ERROR_NONE;
     }
 
     uint32_t State(const PluginHost::IStateControl::state state) override
     {
-        _state = state;
-        return Core::ERROR_NONE;
+        return Request(state == PluginHost::IStateControl::SUSPENDED ? PluginHost::IStateControl::SUSPEND : PluginHost::IStateControl::RESUME);
     }
 
     uint32_t Request(const PluginHost::IStateControl::command command) override
